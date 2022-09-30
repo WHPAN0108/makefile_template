@@ -1,23 +1,52 @@
-install:
+
+.PHONY: clean
+clean:		## Clean up python build files
+	find . -name '*.egg-info' -exec rm -fr {} +
+	find . -name '*.pyc' -exec rm -f {} +
+	find . -name '__pycache__' -exec rm -fr {} +
+	rm -fr build
+	rm -f .coverage
+
+.PHONY: install
+install:  ## Install the packge
 	pip install --upgrade pip &&\
 		pip install -r requirements.txt
 
-test:
-	python -m pytest -vv test_main.py
+.PHONY: update-requirements
+update-requirements:	## Generate or update the requirements.txt file based on requirements from setup.cfg
+	pip-compile setup.cfg
 
-format:
-	black *.py
+.PHONY: test-unit
+test-unit: 	## Run all the formating/linting and unit tests
+test-unit: test-isort test-black test-flake8 test-pylint test-pytest test-docker-lint
 
-run:
-	python main.py
+.PHONY: test-isort
+test-isort:	## Check that all files have their import statements correctly formatted, fails if not
+	isort --profile black --check .
 
-run-uvicorn:
-	uvicorn main:app --reload
+.PHONY: test-black
+test-black:	## Check that Black formatting is correct, fails if not
+	black --check .
 
-killweb:
-	sudo killall uvicorn
+.PHONY: test-flake8
+test-flake8:	## Check flake8 formatting, fails if not
+	flake8 
 
-lint:
-	pylint --disable=R,C main.py
+.PHONY: test-pylint
+test-pylint:	## Check pylint is OK or fails
+	pylint src
 
-all: install lint
+.PHONY: test-pytest
+test-pytest:	## Run tests with pytest
+	# Run coverage only on the unit tests
+	# We have set the pytest test path to tests/unit in pytest.ini
+	pytest --cov .
+
+
+.PHONY: format
+format:		## Applies isort and black formatting
+	isort --profile black .
+	black .
+
+help:		## Show this help.
+	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
